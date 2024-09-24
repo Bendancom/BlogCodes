@@ -1,8 +1,9 @@
-export module multi_index;
-import <vector>;
-import <ranges>;
-import <concepts>;
-import <tuple>;
+#ifndef MULTI_INDEX
+#define MULTI_INDEX
+#include <vector>
+#include <ranges>
+#include <concepts>
+#include <tuple>
 
 template <template <typename, typename, typename... Args> typename T>
 struct map_wrapper {};
@@ -19,7 +20,7 @@ struct map_wrapper_expand<T<Other>, K, V>
     using type = Other<K, V>;
 };
 
-export template <template <typename, typename, typename... Args> typename... Others>
+template <template <typename, typename, typename... Args> typename... Others>
 struct maps_wrapper {};
 
 template <typename T>
@@ -65,7 +66,7 @@ template <
     typename... args>
 using maps_tuple_t = maps_tuple<container, associative_containers, args...>::type;
 
-export template <
+template <
     template <typename T, typename... container_args> typename container,
     typename associative_containers,
     typename... args>
@@ -172,7 +173,7 @@ public:
     constexpr multi_index() {}
 
     template <std::ranges::input_range Rng>
-        requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
+    requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
     constexpr multi_index(Rng &&t) : data_sheet(std::ranges::to<data_sheet_t>(t))
     {
         for (iterator iter = data_sheet.begin(); iter != data_sheet.end(); iter++)
@@ -207,36 +208,36 @@ public:
         return std::ranges::cend(data_sheet);
     }
     constexpr reverse_iterator rbegin()
-        requires requires(data_sheet_t data) { data.rbegin(); }
+    requires requires(data_sheet_t data) { data.rbegin(); }
     {
         return data_sheet.rbegin();
     }
     constexpr const const_reverse_iterator crbegin() const
-        requires requires(data_sheet_t data) { data.crbegin(); }
+    requires requires(data_sheet_t data) { data.crbegin(); }
     {
         return data_sheet.crbegin();
     }
     constexpr reverse_iterator rend()
-        requires requires(data_sheet_t data) { data.rend(); }
+    requires requires(data_sheet_t data) { data.rend(); }
     {
         return data_sheet.rend();
     }
     constexpr const const_reverse_iterator crend() const
-        requires requires(data_sheet_t data) { data.crend(); }
+    requires requires(data_sheet_t data) { data.crend(); }
     {
         return data_sheet.crend();
     }
     constexpr iterator insert(const iterator &iter, const data_list_t &data)
-        requires requires(data_sheet_t data, iterator iter, data_list_t list) { data.insert(iter, list); }
+    requires requires(data_sheet_t data, iterator iter, data_list_t list) { data.insert(iter, list); }
     {
         iterator tmp = data_sheet.insert(iter, data);
         make_indexs(tmp, std::make_index_sequence<sizeof...(args)>{});
         return tmp;
     }
     template <std::ranges::input_range Rng>
-        requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
+    requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
     constexpr iterator insert_range(const iterator &iter, Rng &&data)
-        requires requires(data_sheet_t data, iterator iter, Rng &&range) { data.insert_range(iter, range); }
+    requires requires(data_sheet_t data, iterator iter, Rng &&range) { data.insert_range(iter, range); }
     {
         const size_t size = data.size();
         iterator tmp = data_sheet.insert_range(iter, data);
@@ -249,26 +250,26 @@ public:
         return tmp;
     }
     constexpr void push_back(const data_list_t &data)
-        requires requires(data_sheet_t data, data_list_t list) { data.push_back(list); }
+    requires requires(data_sheet_t data, data_list_t list) { data.push_back(list); }
     {
         data_sheet.push_back(data);
         make_indexs(std::prev(std::ranges::end(data_sheet)), std::make_index_sequence<sizeof...(args)>{});
         return;
     }
     constexpr iterator erase(const iterator &iter)
-        requires requires(data_sheet_t data, iterator iter) { data.erase(iter); }
+    requires requires(data_sheet_t data, iterator iter) { data.erase(iter); }
     {
         erase_indexs(iter, std::make_index_sequence<sizeof...(args)>{});
         return data_sheet.erase(iter);
     }
     constexpr void pop_back()
-        requires requires(data_sheet_t data) { data.pop_back(); }
+    requires requires(data_sheet_t data) { data.pop_back(); }
     {
         erase_indexs(data_sheet.end()--, std::make_index_sequence<sizeof...(args)>{});
         data_sheet.pop_back();
     }
     template <std::ranges::input_range Rng>
-        requires std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>
+    requires std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>
     constexpr void append_range(Rng &&data)
         requires requires(data_sheet_t data, Rng &&range) { data.append_range(range); }
     {
@@ -297,30 +298,30 @@ public:
         return data_sheet.size();
     }
     constexpr void clear()
-        requires requires(data_sheet_t data, maps_tuple_t maps) { data.clear(); maps.clear(); }
+    requires requires(data_sheet_t data) { data.clear(); }
     {
         data_sheet.clear();
         clear_indexs(std::make_index_sequence<sizeof...(args)>{});
     }
     constexpr bool empty() const
-        requires requires(data_sheet_t data) { data.empty(); }
+    requires requires(data_sheet_t data) { data.empty(); }
     {
         return data_sheet.empty();
     }
     constexpr void push_front(const data_list_t &data)
-        requires requires(data_sheet_t data, data_list_t list) { data.push_front(list); }
+    requires requires(data_sheet_t data, data_list_t list) { data.push_front(list); }
     {
         data_sheet.push_front(data);
         make_indexs(data_sheet.begin(), std::make_index_sequence<sizeof...(args)>{});
     }
     constexpr void pop_front()
-        requires requires(data_sheet_t data) { data.pop_front(); }
+    requires requires(data_sheet_t data) { data.pop_front(); }
     {
         erase_indexs(data_sheet.begin(), std::make_index_sequence<sizeof...(args)>{});
         data_sheet.pop_front();
     }
     template <std::ranges::input_range Rng>
-        requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
+    requires requires { std::convertible_to<std::ranges::range_reference_t<Rng>, data_list_t>; }
     constexpr void prepend_range(Rng &&range)
         requires requires(data_sheet_t data, Rng &&range) { data.prepend_range(range); }
     {
@@ -333,3 +334,4 @@ public:
         }
     }
 };
+#endif

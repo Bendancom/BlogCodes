@@ -1,8 +1,6 @@
-import multi_index;
-import <print>;
-import <map>;
-import <vector>;
-
+#include "multi_index.hpp"
+#include <vector>
+#include <map>
 // 对于five_map应有更简单的形式，如 map_wrapper<std::map>表示全为std::map，读者可自行实现(挖坑)
 using five_map = map_wrapper<std::map,std::map,std::map,std::map,std::map>;
 

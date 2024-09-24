@@ -1,22 +1,15 @@
-#include <unordered_set>
 #include <print>
-import units;
 
-template<>
-struct std::hash<basic_dimension>{
-    static constexpr size_t operator()(const std::convertible_to<basic_dimension> auto& dimen){
-       return dimen.getId().hash_code();
-    }
-};
-
-std::unordered_set<basic_dimension> unit;
+#include "include/basic_units.hpp"
+#include "include/unit_dimension.hpp"
+#include <vector>
 
 using namespace units;
 
-int main(){
-    unit.insert(gram);
-    unit.insert(meter);
-    auto magni = unit.find(meter);
-    std::print("{}",magni == unit.end());
+int main() {
+    auto a = basic_unit<double, float, int>(1,basic_MP_dimension{MP::k,meter});
+    auto b = basic_unit<double, float, int8_t>(2,basic_MP_dimension{MP::c,meter});
+    auto e = a / b;
+    std::print("{0},{1}", e.value, true);
     return 0;
 }
