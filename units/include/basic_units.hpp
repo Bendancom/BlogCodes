@@ -15,7 +15,38 @@ public:
             return ldimen.dimen.dimension_name < rdimen.dimen.dimension_name;
         }
     };
-    
+    using dimension_t = basic_MP_dimension<magnitude_t, power_t>;
+    using MP_Less_t = MP_dimension_less<magnitude_t, power_t>;
+private:
+    value_t value;
+    std::set<dimension_t,MP_Less_t> dimens;
+
+    template<rational V,rational M,integral P>
+    requires requires {
+        requires std::common_with<value_t, V>;
+        requires std::common_with<magnitude_t, M>;
+        requires std::common_with<power_t, P>;
+    }
+    value_t MagnitudeCalculateFrom(const basic_unit<V, M, P>& u) const {
+        value_t all_magnitude = 1;
+        for(auto i : dimens) {
+            value_t magni = 1;
+            auto dimen = basic_MP_dimension<M, P>::convert(i);
+            if (auto iter = u.getDimensions().find(dimen); iter != u.getDimensions().end()){
+                magni *= pow<value_t>(
+                    pow<value_t>(
+                        10, 
+                        (char)iter->metric_prefix - (char)i.metric_prefix
+                    ),
+                    iter->dimen.power
+                );
+                magni *= pow<value_t>(iter->dimen.magnitude / i.dimen.magnitude, iter->dimen.power);
+            }
+            all_magnitude *= magni;
+        }
+        return all_magnitude;
+    }
+public:
     basic_unit() {}
     basic_unit(const basic_unit<value_t, magnitude_t, power_t>&) = default;
     
@@ -46,6 +77,13 @@ public:
         }
     }
 
+    constexpr const value_t& getValue() const {
+        return value;
+    }
+    constexpr const std::set<dimension_t, MP_Less_t>& getDimensions() const {
+        return dimens;
+    }
+
     template<rational V,rational M,integral P>
     requires requires {
         requires std::common_with<value_t, V>;
@@ -53,16 +91,20 @@ public:
         requires std::common_with<power_t, P>;
     }
     constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>,std::exception> plus(const basic_unit<V,M,P>& unit) const {
-        if (dimens.size() == unit.dimens.size()) {
+        if (dimens.size() == unit.getDimensions().size()) {
             auto i = dimens.begin();
-            auto j = unit.dimens.begin();
-            for (;i != dimens.end() && j != unit.dimens.end();) {
+            auto j = unit.getDimensions().begin();
+            for (;i != dimens.end() && j != unit.getDimensions().end();) {
                 if (!i->type_equal(*j))
                     return std::unexpected(std::exception());
                 i++;
                 j++;
             }
-            return basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>(unit.value + value,dimens);
+            return basic_unit<
+                std::common_type_t<value_t,V>,
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            >(value + MagnitudeCalculateFrom(unit) * unit.getValue(),dimens);
         }
         else return std::unexpected(std::exception());
     }
@@ -74,16 +116,20 @@ public:
         requires std::common_with<power_t, P>;
     }
     constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>>,std::exception> minus(const basic_unit<V, M, P>& unit) const {
-        if (dimens.size() == unit.dimens.size()){
+        if (dimens.size() == unit.getDimensions().size()){
             auto i = dimens.begin();
-            auto j = unit.dimens.begin();
-            for (;i != dimens.end() && j != unit.dimens.end();){
+            auto j = unit.getDimensions().begin();
+            for (;i != dimens.end() && j != unit.getDimensions().end();){
                 if (!i->type_equal(*j))
                     return std::unexpected(std::exception());
                 i++;
                 j++;
             }
-            return basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>(value - unit.value,dimens);
+            return basic_unit<
+                std::common_type_t<value_t,V>,
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            >(value - MagnitudeCalculateFrom(unit)* unit.getValue() ,dimens);
         }
         else return std::unexpected(std::exception());
     }
@@ -95,15 +141,44 @@ public:
         requires std::common_with<power_t, P>;
     }
     constexpr basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>> multiply(const basic_unit<V, M, P>& unit) const {
-        std::set<basic_MP_dimension<std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>,MP_dimension_less<std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>> tmp_dimens;
+        std::set<
+            basic_MP_dimension<
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            >,
+            MP_dimension_less<
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            >
+        > tmp_dimens;
         for (auto i : dimens){
             auto dimen = basic_MP_dimension<M, P>::convert(i);
-            if (auto iter = unit.dimens.find(dimen); iter != unit.dimens.end()){
-                 tmp_dimens.insert(basic_MP_dimension<std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>{i.magnitude,iter->power + i.power,i.short_name,i.dimension_name});
-            }
-            else tmp_dimens.insert(i);
+            basic_dimension<
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            > tmp_dimen {
+                i.dimen.magnitude,
+                i.dimen.power,
+                i.dimen.short_name,
+                i.dimen.dimension_name,
+            };
+            if (auto iter = unit.getDimensions().find(dimen); iter != unit.getDimensions().end())
+                tmp_dimen.power += iter->dimen.power;
+            tmp_dimens.insert(
+                basic_MP_dimension<
+                    std::common_type_t<magnitude_t,M>,
+                    std::common_type_t<power_t,P>
+                > {
+                    i.metric_prefix,
+                    tmp_dimen
+                }
+            );
         }
-        return basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>(value * unit.value,tmp_dimens);
+        return basic_unit<
+            std::common_type_t<value_t,V>,
+            std::common_type_t<magnitude_t,M>,
+            std::common_type_t<power_t,P>
+        >(value * MagnitudeCalculateFrom(unit) * unit.getValue(),tmp_dimens);
     }
 
     template<rational V,rational M,integral P>
@@ -113,7 +188,7 @@ public:
         requires std::common_with<power_t, P>;
     }
     constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>>,std::exception> devide(const basic_unit<V, M, P>& unit) const {
-        if (unit.value == 0)
+        if (unit.getValue() == 0)
             return std::unexpected(std::exception());
         std::set<
             basic_MP_dimension<
@@ -127,20 +202,32 @@ public:
         > tmp_dimens;
         for (auto i : dimens){
             auto dimen = basic_MP_dimension<M, P>::convert(i);
-            if (auto iter = unit.dimens.find(dimen); iter != unit.dimens.end()){
-                tmp_dimens.insert(basic_MP_dimension<std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>{
+            basic_dimension<
+                std::common_type_t<magnitude_t,M>,
+                std::common_type_t<power_t,P>
+            > tmp_dimen {
+                i.dimen.magnitude,
+                i.dimen.power,
+                i.dimen.short_name,
+                i.dimen.dimension_name,
+            };
+            if (auto iter = unit.getDimensions().find(dimen); iter != unit.getDimensions().end())
+                tmp_dimen.power -= iter->dimen.power;
+            tmp_dimens.insert(
+                basic_MP_dimension<
+                    std::common_type_t<magnitude_t,M>,
+                    std::common_type_t<power_t,P>
+                > {
                     i.metric_prefix,
-                    {
-                        i.dimen.magnitude,
-                        iter->dimen.power - i.dimen.power,
-                        i.dimen.short_name,
-                        i.dimen.dimension_name
-                    }
-                });
-            }
-            else tmp_dimens.insert(i);
+                    tmp_dimen
+                }
+            );
         }
-        return basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>(value / unit.value,tmp_dimens);
+        return basic_unit<
+            std::common_type_t<value_t,V>,
+            std::common_type_t<magnitude_t,M>,
+            std::common_type_t<power_t,P>
+        >(value / (MagnitudeCalculateFrom(unit) * unit.getValue()),tmp_dimens);
     }
 
     template<rational V,rational M,integral P>
@@ -191,8 +278,5 @@ public:
             return u.value();
         else throw u.error();
     }
-public:
-    value_t value;
-    std::set<basic_MP_dimension<magnitude_t, power_t>,MP_dimension_less<magnitude_t,power_t>> dimens;
 };
 #endif

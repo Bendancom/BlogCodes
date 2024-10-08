@@ -34,7 +34,7 @@ struct basic_MP_dimension{
         requires std::common_with<power_t,I>;
     }
     constexpr bool type_equal(const basic_MP_dimension<R, I>& MP_dimen) const {
-        return dimen.type_equal(MP_dimen);
+        return dimen.type_equal(MP_dimen.dimen);
     }
 };
 #endif
