@@ -23,9 +23,9 @@ private:
 
     template<rational V,rational M,integral P>
     requires requires {
-        requires std::common_with<value_t, V>;
-        requires std::common_with<magnitude_t, M>;
-        requires std::common_with<power_t, P>;
+        requires std::convertible_to<V, value_t>;
+        requires std::convertible_to<M, magnitude_t>;
+        requires std::convertible_to<P, power_t>;
     }
     value_t MagnitudeCalculateFrom(const basic_unit<V, M, P>& u) const {
         value_t all_magnitude = 1;
@@ -33,31 +33,34 @@ private:
             value_t magni = 1;
             auto dimen = basic_MP_dimension<M, P>::convert(i);
             if (auto iter = u.getDimensions().find(dimen); iter != u.getDimensions().end()){
-                magni *= pow<value_t>(
-                    pow<value_t>(
-                        10, 
-                        (char)iter->metric_prefix - (char)i.metric_prefix
-                    ),
-                    iter->dimen.power
-                );
                 magni *= pow<value_t>(iter->dimen.magnitude / i.dimen.magnitude, iter->dimen.power);
+                magni *= pow<value_t>(MP_array[(char)iter->metric_prefix] / MP_array[(char)i.metric_prefix],iter->dimen.power);
             }
             all_magnitude *= magni;
         }
         return all_magnitude;
     }
 public:
-    basic_unit() {}
-    basic_unit(const basic_unit<value_t, magnitude_t, power_t>&) = default;
+    constexpr basic_unit() {}
+    template<rational V,rational M,integral P>
+    requires requires {
+        requires std::convertible_to<V, value_t>;
+        requires std::convertible_to<M, magnitude_t>;
+        requires std::convertible_to<P, power_t>;
+    }
+    constexpr basic_unit(const basic_unit<V, M, P>& unit) : value(unit.getValue()) {
+        for(auto i : unit.getDimensions())
+            dimens.insert(basic_MP_dimension<magnitude_t, power_t>::convert(i));        
+    }
     
-    basic_unit(const value_t& value) : value(value) {}
+    constexpr basic_unit(const value_t& value) : value(value) {}
 
     template<rational M,integral P>
     requires requires {
         requires std::convertible_to<M,magnitude_t>;
         requires std::convertible_to<P,power_t>;
     }
-    basic_unit(const value_t& value,const basic_MP_dimension<M, P>& dimen) : value(value) {
+    constexpr basic_unit(const value_t& value,const basic_MP_dimension<M, P>& dimen) : value(value) {
         dimens.insert(basic_MP_dimension<magnitude_t, power_t>::convert(dimen));
     }
 
@@ -90,7 +93,14 @@ public:
         requires std::common_with<magnitude_t, M>;
         requires std::common_with<power_t, P>;
     }
-    constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>, std::common_type_t<power_t,P>>,std::exception> plus(const basic_unit<V,M,P>& unit) const {
+    constexpr std::expected<
+        basic_unit<
+            std::common_type_t<value_t,V>,
+            std::common_type_t<magnitude_t,M>,
+            std::common_type_t<power_t,P>
+        >,
+        std::exception
+    > plus(const basic_unit<V,M,P>& unit) const noexcept {
         if (dimens.size() == unit.getDimensions().size()) {
             auto i = dimens.begin();
             auto j = unit.getDimensions().begin();
@@ -115,7 +125,14 @@ public:
         requires std::common_with<magnitude_t, M>;
         requires std::common_with<power_t, P>;
     }
-    constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>>,std::exception> minus(const basic_unit<V, M, P>& unit) const {
+    constexpr std::expected<
+        basic_unit<
+            std::common_type_t<value_t,V>,
+            std::common_type_t<magnitude_t,M>,
+            std::common_type_t<power_t,P>
+        >,
+        std::exception
+    > minus(const basic_unit<V, M, P>& unit) const noexcept {
         if (dimens.size() == unit.getDimensions().size()){
             auto i = dimens.begin();
             auto j = unit.getDimensions().begin();
@@ -140,7 +157,11 @@ public:
         requires std::common_with<magnitude_t, M>;
         requires std::common_with<power_t, P>;
     }
-    constexpr basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>> multiply(const basic_unit<V, M, P>& unit) const {
+    constexpr basic_unit<
+        std::common_type_t<value_t,V>,
+        std::common_type_t<magnitude_t,M>,
+        std::common_type_t<power_t,P>
+    > multiply(const basic_unit<V, M, P>& unit) const noexcept {
         std::set<
             basic_MP_dimension<
                 std::common_type_t<magnitude_t,M>,
@@ -187,7 +208,14 @@ public:
         requires std::common_with<magnitude_t, M>;
         requires std::common_with<power_t, P>;
     }
-    constexpr std::expected<basic_unit<std::common_type_t<value_t,V>, std::common_type_t<magnitude_t,M>,std::common_type_t<power_t,P>>,std::exception> devide(const basic_unit<V, M, P>& unit) const {
+    constexpr std::expected<
+        basic_unit<
+            std::common_type_t<value_t,V>,
+            std::common_type_t<magnitude_t,M>,
+            std::common_type_t<power_t,P>
+        >,
+        std::exception
+    > devide(const basic_unit<V, M, P>& unit) const noexcept {
         if (unit.getValue() == 0)
             return std::unexpected(std::exception());
         std::set<

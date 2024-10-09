@@ -7,8 +7,12 @@ template<typename T>
 concept rational = requires (T x, T y) {
 	{x + y} -> std::convertible_to<T>;
 	{x - y}  -> std::convertible_to<T>;
-	{x* y} -> std::convertible_to<T>;
+	{x * y} -> std::convertible_to<T>;
 	{x / y} -> std::convertible_to<T>;
+	{x += y} -> std::convertible_to<T>;
+	{x -= y}  -> std::convertible_to<T>;
+	{x *= y} -> std::convertible_to<T>;
+	{x /= y} -> std::convertible_to<T>;
 	{-x} -> std::convertible_to<T>;
 	x = y;
 	requires T(3) / T(2) == T(1.5);
@@ -19,8 +23,12 @@ template<typename T>
 concept integral = requires (T x, T y) {
 	{x + y} -> std::convertible_to<T>;
 	{x - y}  -> std::convertible_to<T>;
-	{x* y} -> std::convertible_to<T>;
+	{x * y} -> std::convertible_to<T>;
 	{x / y} -> std::convertible_to<T>;
+	{x += y} -> std::convertible_to<T>;
+	{x -= y}  -> std::convertible_to<T>;
+	{x *= y} -> std::convertible_to<T>;
+	{x /= y} -> std::convertible_to<T>;
 	{-x} -> std::convertible_to<T>;
 	x = y;
 	requires T(3) / T(2) == T(1) || T(3) / T(2) == T(2);

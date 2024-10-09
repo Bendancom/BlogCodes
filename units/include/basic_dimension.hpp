@@ -3,7 +3,6 @@
 
 #include "math.hpp"
 #include <string>
-#include <compare>
 
 template<rational magnitude_t,integral power_t>
 struct basic_dimension{
