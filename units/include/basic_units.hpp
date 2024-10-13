@@ -27,7 +27,7 @@ private:
         requires std::convertible_to<M, magnitude_t>;
         requires std::convertible_to<P, power_t>;
     }
-    value_t MagnitudeCalculateFrom(const basic_unit<V, M, P>& u) const {
+    constexpr value_t MagnitudeCalculateFrom(const basic_unit<V, M, P>& u) const {
         value_t all_magnitude = 1;
         for(auto i : dimens) {
             value_t magni = 1;
@@ -42,6 +42,7 @@ private:
     }
 public:
     constexpr basic_unit() {}
+
     template<rational V,rational M,integral P>
     requires requires {
         requires std::convertible_to<V, value_t>;
